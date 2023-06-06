@@ -436,6 +436,7 @@ SkipList<Key, Comparator>::SkipList(const Comparator cmp, Allocator* allocator,
 template <typename Key, class Comparator>
 void SkipList<Key, Comparator>::Insert(const Key& key) {
   // fast path for sequential insertion
+  //這邊我暫時看不懂他在幹嘛
   if (!KeyIsAfterNode(key, prev_[0]->NoBarrier_Next(0)) &&
       (prev_[0] == head_ || KeyIsAfterNode(key, prev_[0]))) {
     assert(prev_[0] != head_ || (prev_height_ == 1 && GetMaxHeight() == 1));
@@ -457,6 +458,8 @@ void SkipList<Key, Comparator>::Insert(const Key& key) {
   // Our data structure does not allow duplicate insertion
   assert(prev_[0]->Next(0) == nullptr || !Equal(key, prev_[0]->Next(0)->key));
 
+
+  //當你隨機獲取的高超過現在的index高度，要先與head_建立連接（最前面的索引）
   int height = RandomHeight();
   if (height > GetMaxHeight()) {
     for (int i = GetMaxHeight(); i < height; i++) {
@@ -473,13 +476,13 @@ void SkipList<Key, Comparator>::Insert(const Key& key) {
     // keys.  In the latter case the reader will use the new node.
     max_height_.store(height, std::memory_order_relaxed);
   }
-
+  
   Node* x = NewNode(key, height);
   for (int i = 0; i < height; i++) {
     // NoBarrier_SetNext() suffices since we will add a barrier when
     // we publish a pointer to "x" in prev[i].
-    x->NoBarrier_SetNext(i, prev_[i]->NoBarrier_Next(i));
-    prev_[i]->SetNext(i, x);
+    x->NoBarrier_SetNext(i, prev_[i]->NoBarrier_Next(i)); //設置x的下一個節點
+    prev_[i]->SetNext(i, x); //設置前一個節點的下一個為x
   }
   prev_[0] = x;
   prev_height_ = height;
